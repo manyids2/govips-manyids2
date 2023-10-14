@@ -51,6 +51,28 @@ func vipsMemory(
 ) (*C.VipsImage, error) {
 	var out *C.VipsImage
 
+	out = C.vips_image_new_from_memory(
+		unsafe.Pointer(&buf[0]),
+		C.ulong(size),
+		C.int(width),
+		C.int(height),
+		C.int(bands),
+		C.VipsBandFormat(format),
+	)
+	return out, nil
+}
+
+// https://www.libvips.org/API/current/VipsImage.html#vips-image-new-from-memory
+func vipsMemoryCopy(
+	buf []byte,
+	size int,
+	width int,
+	height int,
+	bands int,
+	format C.VipsBandFormat,
+) (*C.VipsImage, error) {
+	var out *C.VipsImage
+
 	out = C.vips_image_new_from_memory_copy(
 		unsafe.Pointer(&buf[0]),
 		C.ulong(size),

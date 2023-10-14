@@ -552,10 +552,17 @@ func Black(width, height int) (*ImageRef, error) {
 }
 
 // MemoryRGBA creates a new image from native go image.RGBA type
-func MemoryRGBA(img *image.RGBA, width, height int) (*ImageRef, error) {
+func MemoryRGBA(img *image.RGBA, do_copy bool) (*ImageRef, error) {
 	bands := 4
+	width, height := img.Bounds().Size().X, img.Bounds().Size().Y
 	size := width * height * bands
-	vipsImage, err := vipsMemory(img.Pix, size, width, height, bands, C.VIPS_FORMAT_CHAR)
+	var vipsImage *C.VipsImage
+	var err error
+	if do_copy {
+		vipsImage, err = vipsMemoryCopy(img.Pix, size, width, height, bands, C.VIPS_FORMAT_CHAR)
+	} else {
+		vipsImage, err = vipsMemory(img.Pix, size, width, height, bands, C.VIPS_FORMAT_CHAR)
+	}
 	imageRef := &ImageRef{
 		image: vipsImage,
 	}
