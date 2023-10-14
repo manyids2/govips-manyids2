@@ -38,10 +38,6 @@ type ImageRef struct {
 	optimizedIccProfile string
 }
 
-func (p *ImageRef) Buffer() []byte {
-	return p.buf
-}
-
 // ImageMetadata is a data structure holding the width, height, orientation and other metadata of the picture.
 type ImageMetadata struct {
 	Format      ImageType
