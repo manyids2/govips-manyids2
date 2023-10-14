@@ -1866,7 +1866,7 @@ func (r *ImageRef) Replicate(across int, down int) error {
 	return nil
 }
 
-// ToBytes writes the image to memory in VIPs format and returns the raw bytes, useful for storage.
+// NOTE: ToBytes writes the image to memory in VIPs format and returns the raw bytes, useful for storage.
 func (r *ImageRef) ToBytes() ([]byte, error) {
 	var cSize C.size_t
 	cData := C.vips_image_write_to_memory(r.image, &cSize)

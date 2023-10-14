@@ -70,11 +70,11 @@ int load_image_buffer(LoadParams *params, void *buf, size_t len,
                                 "autorotate", params->autorotate, NULL);
 
   }
-  #if (VIPS_MAJOR_VERSION >= 8) && (VIPS_MINOR_VERSION >= 11)
+#if (VIPS_MAJOR_VERSION >= 8) && (VIPS_MINOR_VERSION >= 11)
   else if (imageType == JP2K) {
-       code = vips_jp2kload_buffer(buf, len, out, "page", params->page, NULL);
+    code = vips_jp2kload_buffer(buf, len, out, "page", params->page, NULL);
   }
-  #endif
+#endif
 
   return code;
 }
@@ -195,6 +195,43 @@ int load_buffer(const char *operationName, void *buf, size_t len,
   return 0;
 }
 
+int load_memory(const char *operationName, void *buf, size_t len, size_t width,
+                size_t height, LoadParams *params,
+                SetLoadOptionsFn setLoadOptions) {
+  VipsBlob *blob = vips_blob_new(NULL, buf, len);
+
+  VipsOperation *operation = vips_operation_new(operationName);
+  if (!operation) {
+    return 1;
+  }
+
+  if (vips_object_set(VIPS_OBJECT(operation), "buffer", blob, NULL)) {
+    vips_area_unref(VIPS_AREA(blob));
+    return 1;
+  }
+
+  vips_area_unref(VIPS_AREA(blob));
+
+  if (setLoadOptions(operation, params)) {
+    vips_object_unref_outputs(VIPS_OBJECT(operation));
+    g_object_unref(operation);
+    return 1;
+  }
+
+  if (vips_cache_operation_buildp(&operation)) {
+    vips_object_unref_outputs(VIPS_OBJECT(operation));
+    g_object_unref(operation);
+    return 1;
+  }
+
+  g_object_get(VIPS_OBJECT(operation), "out", &params->outputImage, NULL);
+
+  vips_object_unref_outputs(VIPS_OBJECT(operation));
+  g_object_unref(operation);
+
+  return 0;
+}
+
 typedef int (*SetSaveOptionsFn)(VipsOperation *operation, SaveParams *params);
 
 int save_buffer(const char *operationName, SaveParams *params,
@@ -252,22 +289,23 @@ int set_jpegsave_options(VipsOperation *operation, SaveParams *params) {
 
 // https://libvips.github.io/libvips/API/current/VipsForeignSave.html#vips-pngsave-buffer
 int set_pngsave_options(VipsOperation *operation, SaveParams *params) {
-  int ret =
-      vips_object_set(VIPS_OBJECT(operation), "strip", params->stripMetadata,
-                      "compression", params->pngCompression, "interlace",
-                      params->interlace, "filter", params->pngFilter, "palette",
-                      params->pngPalette, NULL);
+  int ret = vips_object_set(
+      VIPS_OBJECT(operation), "strip", params->stripMetadata, "compression",
+      params->pngCompression, "interlace", params->interlace, "filter",
+      params->pngFilter, "palette", params->pngPalette, NULL);
 
   if (!ret && params->quality) {
     ret = vips_object_set(VIPS_OBJECT(operation), "Q", params->quality, NULL);
   }
 
   if (!ret && params->pngDither) {
-    ret = vips_object_set(VIPS_OBJECT(operation), "dither", params->pngDither, NULL);
+    ret = vips_object_set(VIPS_OBJECT(operation), "dither", params->pngDither,
+                          NULL);
   }
 
   if (!ret && params->pngBitdepth) {
-    ret = vips_object_set(VIPS_OBJECT(operation), "bitdepth", params->pngBitdepth, NULL);
+    ret = vips_object_set(VIPS_OBJECT(operation), "bitdepth",
+                          params->pngBitdepth, NULL);
   }
 
   // TODO: Handle `profile` param.
@@ -278,14 +316,11 @@ int set_pngsave_options(VipsOperation *operation, SaveParams *params) {
 // https://github.com/libvips/libvips/blob/master/libvips/foreign/webpsave.c#L524
 // https://libvips.github.io/libvips/API/current/VipsForeignSave.html#vips-webpsave-buffer
 int set_webpsave_options(VipsOperation *operation, SaveParams *params) {
-  int ret =
-      vips_object_set(VIPS_OBJECT(operation),
-                      "strip", params->stripMetadata,
-                      "lossless", params->webpLossless,
-                      "near_lossless", params->webpNearLossless,
-                      "reduction_effort", params->webpReductionEffort,
-                      "profile", params->webpIccProfile ? params->webpIccProfile : "none",
-                      NULL);
+  int ret = vips_object_set(
+      VIPS_OBJECT(operation), "strip", params->stripMetadata, "lossless",
+      params->webpLossless, "near_lossless", params->webpNearLossless,
+      "reduction_effort", params->webpReductionEffort, "profile",
+      params->webpIccProfile ? params->webpIccProfile : "none", NULL);
 
   if (!ret && params->quality) {
     vips_object_set(VIPS_OBJECT(operation), "Q", params->quality, NULL);
@@ -322,15 +357,19 @@ int set_magicksave_options(VipsOperation *operation, SaveParams *params) {
 // https://libvips.github.io/libvips/API/current/VipsForeignSave.html#vips-gifsave-buffer
 int set_gifsave_options(VipsOperation *operation, SaveParams *params) {
   int ret = 0;
-  // See for argument values: https://www.libvips.org/API/current/VipsForeignSave.html#vips-gifsave
+  // See for argument values:
+  // https://www.libvips.org/API/current/VipsForeignSave.html#vips-gifsave
   if (params->gifDither > 0.0 && params->gifDither <= 1.0) {
-    ret = vips_object_set(VIPS_OBJECT(operation), "dither", params->gifDither, NULL);
+    ret = vips_object_set(VIPS_OBJECT(operation), "dither", params->gifDither,
+                          NULL);
   }
   if (params->gifEffort >= 1 && params->gifEffort <= 10) {
-    ret = vips_object_set(VIPS_OBJECT(operation), "effort", params->gifEffort, NULL);
+    ret = vips_object_set(VIPS_OBJECT(operation), "effort", params->gifEffort,
+                          NULL);
   }
   if (params->gifBitdepth >= 1 && params->gifBitdepth <= 8) {
-      ret = vips_object_set(VIPS_OBJECT(operation), "bitdepth", params->gifBitdepth, NULL);
+    ret = vips_object_set(VIPS_OBJECT(operation), "bitdepth",
+                          params->gifBitdepth, NULL);
   }
   return ret;
 }
@@ -389,14 +428,20 @@ int set_avifsave_options(VipsOperation *operation, SaveParams *params) {
 int set_jp2ksave_options(VipsOperation *operation, SaveParams *params) {
   int ret = vips_object_set(
       VIPS_OBJECT(operation), "subsample_mode", params->jpegSubsample,
-      "tile_height", params->jp2kTileHeight, "tile_width", params->jp2kTileWidth,
-      "lossless", params->jp2kLossless, NULL);
+      "tile_height", params->jp2kTileHeight, "tile_width",
+      params->jp2kTileWidth, "lossless", params->jp2kLossless, NULL);
 
   if (!ret && params->quality) {
     ret = vips_object_set(VIPS_OBJECT(operation), "Q", params->quality, NULL);
   }
 
   return ret;
+}
+
+int load_from_memory(LoadParams *params, void *buf, size_t len, size_t width,
+                     size_t height) {
+  return load_memory("jpegload_buffer", buf, len, width, height, params,
+                     set_jpegload_options);
 }
 
 int load_from_buffer(LoadParams *params, void *buf, size_t len) {
@@ -431,9 +476,9 @@ int load_from_buffer(LoadParams *params, void *buf, size_t len) {
     case AVIF:
       return load_buffer("heifload_buffer", buf, len, params,
                          set_heifload_options);
-   case JP2K:
+    case JP2K:
       return load_buffer("jp2kload_buffer", buf, len, params,
-                          set_jp2kload_options);
+                         set_jp2kload_options);
     default:
       g_warning("Unsupported input type given: %d", params->inputFormat);
   }
