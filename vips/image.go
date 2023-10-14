@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"io/ioutil"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -387,7 +387,7 @@ func NewJp2kExportParams() *Jp2kExportParams {
 
 // NewImageFromReader loads an ImageRef from the given reader
 func NewImageFromReader(r io.Reader) (*ImageRef, error) {
-	buf, err := ioutil.ReadAll(r)
+	buf, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +402,7 @@ func NewImageFromFile(file string) (*ImageRef, error) {
 
 // LoadImageFromFile loads an image from file and creates a new ImageRef
 func LoadImageFromFile(file string, params *ImportParams) (*ImageRef, error) {
-	buf, err := ioutil.ReadFile(file)
+	buf, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -1355,7 +1355,7 @@ func (r *ImageRef) TransformICCProfile(outputProfilePath string) error {
 func (r *ImageRef) OptimizeICCProfile() error {
 	inputProfile := r.determineInputICCProfile()
 	if !r.HasICCProfile() && (inputProfile == "") {
-		//No embedded ICC profile in the input image and no input profile determined, nothing to do.
+		// No embedded ICC profile in the input image and no input profile determined, nothing to do.
 		return nil
 	}
 
@@ -1816,7 +1816,8 @@ func (r *ImageRef) Rotate(angle Angle) error {
 // ignored. You can add an alpha channel to an image with `BandJoinConst` (e.g. `img.BandJoinConst([]float64{255})`) or
 // AddAlpha.
 func (r *ImageRef) Similarity(scale float64, angle float64, backgroundColor *ColorRGBA,
-	idx float64, idy float64, odx float64, ody float64) error {
+	idx float64, idy float64, odx float64, ody float64,
+) error {
 	out, err := vipsSimilarity(r.image, scale, angle, backgroundColor, idx, idy, odx, ody)
 	if err != nil {
 		return err
