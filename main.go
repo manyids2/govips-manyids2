@@ -11,10 +11,10 @@ import (
 
 func main() {
 	width, height := 256, 512
-	img := image.NewRGBA(image.Rect(0, 0, height, width))
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
-			img.Set(y, x, color.RGBA{128, 128, 128, 128})
+			img.Set(x, y, color.RGBA{128, 128, 128, 128})
 		}
 	}
 

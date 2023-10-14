@@ -54,8 +54,8 @@ func vipsMemory(
 	out = C.vips_image_new_from_memory_copy(
 		unsafe.Pointer(&buf[0]),
 		C.ulong(size),
-		C.int(height), // Why is width and height messed up?
 		C.int(width),
+		C.int(height),
 		C.int(bands),
 		C.VipsBandFormat(format),
 	)
