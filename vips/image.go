@@ -551,6 +551,23 @@ func Black(width, height int) (*ImageRef, error) {
 	return imageRef, err
 }
 
+// MemoryBytes creates a new image from array of bytes given width, height, bands
+func MemoryBytes(buf []byte, width, height int, bands int, do_copy bool) (*ImageRef, error) {
+	size := width * height * bands
+	var vipsImage *C.VipsImage
+	var err error
+	if do_copy {
+		vipsImage, err = vipsMemoryCopy(buf, size, width, height, bands, C.VIPS_FORMAT_CHAR)
+	} else {
+		vipsImage, err = vipsMemory(buf, size, width, height, bands, C.VIPS_FORMAT_CHAR)
+	}
+	imageRef := &ImageRef{
+		image: vipsImage,
+	}
+	runtime.SetFinalizer(imageRef, finalizeImage)
+	return imageRef, err
+}
+
 // MemoryRGBA creates a new image from native go image.RGBA type
 func MemoryRGBA(img *image.RGBA, do_copy bool) (*ImageRef, error) {
 	bands := 4
