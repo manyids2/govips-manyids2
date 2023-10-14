@@ -38,6 +38,10 @@ type ImageRef struct {
 	optimizedIccProfile string
 }
 
+func (p *ImageRef) Buffer() []byte {
+	return p.buf
+}
+
 // ImageMetadata is a data structure holding the width, height, orientation and other metadata of the picture.
 type ImageMetadata struct {
 	Format      ImageType
@@ -544,6 +548,18 @@ func Identity(ushort bool) (*ImageRef, error) {
 // Black creates a new black image of the specified size
 func Black(width, height int) (*ImageRef, error) {
 	vipsImage, err := vipsBlack(width, height)
+	imageRef := &ImageRef{
+		image: vipsImage,
+	}
+	runtime.SetFinalizer(imageRef, finalizeImage)
+	return imageRef, err
+}
+
+// MemoryRGBA creates a new image from native go image.RGBA type
+func MemoryRGBA(img *image.RGBA, width, height int) (*ImageRef, error) {
+	bands := 4
+	size := width * height * bands
+	vipsImage, err := vipsMemory(img.Pix, size, width, height, bands, C.VIPS_FORMAT_CHAR)
 	imageRef := &ImageRef{
 		image: vipsImage,
 	}

@@ -195,43 +195,6 @@ int load_buffer(const char *operationName, void *buf, size_t len,
   return 0;
 }
 
-int load_memory(const char *operationName, void *buf, size_t len, size_t width,
-                size_t height, LoadParams *params,
-                SetLoadOptionsFn setLoadOptions) {
-  VipsBlob *blob = vips_blob_new(NULL, buf, len);
-
-  VipsOperation *operation = vips_operation_new(operationName);
-  if (!operation) {
-    return 1;
-  }
-
-  if (vips_object_set(VIPS_OBJECT(operation), "buffer", blob, NULL)) {
-    vips_area_unref(VIPS_AREA(blob));
-    return 1;
-  }
-
-  vips_area_unref(VIPS_AREA(blob));
-
-  if (setLoadOptions(operation, params)) {
-    vips_object_unref_outputs(VIPS_OBJECT(operation));
-    g_object_unref(operation);
-    return 1;
-  }
-
-  if (vips_cache_operation_buildp(&operation)) {
-    vips_object_unref_outputs(VIPS_OBJECT(operation));
-    g_object_unref(operation);
-    return 1;
-  }
-
-  g_object_get(VIPS_OBJECT(operation), "out", &params->outputImage, NULL);
-
-  vips_object_unref_outputs(VIPS_OBJECT(operation));
-  g_object_unref(operation);
-
-  return 0;
-}
-
 typedef int (*SetSaveOptionsFn)(VipsOperation *operation, SaveParams *params);
 
 int save_buffer(const char *operationName, SaveParams *params,
@@ -438,11 +401,11 @@ int set_jp2ksave_options(VipsOperation *operation, SaveParams *params) {
   return ret;
 }
 
-int load_from_memory(LoadParams *params, void *buf, size_t len, size_t width,
-                     size_t height) {
-  return load_memory("jpegload_buffer", buf, len, width, height, params,
-                     set_jpegload_options);
-}
+// int load_from_memory(LoadParams *params, void *buf, size_t len, size_t width,
+//                      size_t height) {
+//   return load_memory("jpegload_buffer", buf, len, width, height, params,
+//                      set_jpegload_options);
+// }
 
 int load_from_buffer(LoadParams *params, void *buf, size_t len) {
   switch (params->inputFormat) {
